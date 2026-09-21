@@ -29,6 +29,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
   - [Agentic Schema Mapping](#agentic-schema-mapping)
   - [Proactive Fraud Detection Agent](#proactive-fraud-detection-agent)
   - [Cortex AI Gateway](#cortex-ai-gateway)
+  - [CoCo Getting Started — Data Engineering](#coco-getting-started--data-engineering)
 - [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Presentation Format](#presentation-format)
@@ -37,7 +38,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
 
 ## Overview
 
-This repository contains twenty-one enablement modules covering key Cortex AI and Snowflake ML topics:
+This repository contains twenty-two enablement modules covering key Cortex AI and Snowflake ML topics:
 
 | Module | Audience | Format | Slides |
 |--------|----------|--------|--------|
@@ -62,6 +63,7 @@ This repository contains twenty-one enablement modules covering key Cortex AI an
 | Agentic Schema Mapping | SEs, Data Engineers, Customers | Presentation + Demo | [View](https://sfc-gh-perickson.github.io/demos-enablement/agentic-schema-mapping/presentations/schema-mapper-demo.html) |
 | Proactive Fraud Detection Agent | SEs, Data Scientists, Customers | Presentation + End-to-End Demo App | [View](https://sfc-gh-perickson.github.io/demos-enablement/proactive-fraud-agent/presentations/proactive-fraud-detection-agent.html) |
 | Cortex AI Gateway | SEs, Solution Architects, Platform Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/cortex-ai-gateway/cortex-ai-gateway-presentation.html) |
+| CoCo Getting Started — Data Engineering | SEs, Customers, Data Engineers | Presentation + Hands-on Lab + Skill | [View](https://sfc-gh-perickson.github.io/demos-enablement/coco-getting-started/presentations/coco-data-engineering.html) |
 
 Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, feature-store, cortex-ai-observability, cortex-agent-multi-tenancy, and label-studio-spcs modules also provide complete hands-on labs with SQL setup and notebooks.
 
@@ -690,6 +692,35 @@ Demonstrates Snowflake's Cortex AI Gateway as a centralized LLM inference layer,
 
 ---
 
+### CoCo Getting Started — Data Engineering
+
+**Location:** `coco-getting-started/`
+
+A 30-minute hands-on lab demonstrating how Cortex Code (CoCo) accelerates data engineering workflows. Uses a fictional payment company (Acme Financial) that ingests transaction data from multiple processors with inconsistent formats, walking through three tiers: explore raw data, build transformations conversationally, and package the pattern as a reusable CoCo skill.
+
+**Topics covered:**
+- Data profiling and quality assessment with CoCo
+- Iterative SQL generation for standardization (date parsing, numeric cleaning, text normalization)
+- Dynamic tables for pipeline refresh
+- CoCo skill development for repeatable dbt model generation
+
+**Contents:**
+
+| File | Description |
+|------|-------------|
+| [`presentations/coco-data-engineering.html`](https://sfc-gh-perickson.github.io/demos-enablement/coco-getting-started/presentations/coco-data-engineering.html) | 8-slide presentation deck |
+| `presentations/coco-data-engineering-speaker-notes.md` | Speaker notes with per-slide CoCo prompts |
+| `setup.sql` | Creates `COCO_DE_LAB` database with 4 messy vendor tables (~500 rows each) |
+| `skills/dbt-ingest-pipeline/skill.md` | CoCo skill for generating dbt staging models |
+
+#### Lab Prerequisites
+
+1. A Snowflake account with Cortex Code enabled
+2. Run `coco-getting-started/setup.sql` to create the `COCO_DE_LAB` database
+3. Tiers 1-2 use Snowsight + CoCo sidebar; Tier 3 uses CoCo CLI in terminal
+
+---
+
 ## Repository Structure
 
 ```
@@ -738,6 +769,14 @@ enablement/
 │   └── presentations/
 │       ├── agent-observability-analysis.html
 │       └── agent-observability-analysis-speaker-notes.md
+├── coco-getting-started/
+│   ├── setup.sql
+│   ├── presentations/
+│   │   ├── coco-data-engineering.html
+│   │   └── coco-data-engineering-speaker-notes.md
+│   └── skills/
+│       └── dbt-ingest-pipeline/
+│           └── skill.md
 ├── cortex-ai-gateway/
 │   ├── setup.sql
 │   ├── cortex-ai-gateway-langchain-mcp.ipynb
@@ -875,6 +914,7 @@ enablement/
    - **Agentic Schema Mapping:** Run `setup.sql`, `seed_reference_data.sql`, then `deploy.sql` in the `agentic-schema-mapping/` directory
    - **Proactive Fraud Detection Agent:** Run scripts `01`-`06` in `proactive-fraud-agent/setup/`, then `cd app && npm install && snow app deploy`
    - **Cortex AI Gateway:** Run `cortex-ai-gateway/setup.sql`, then open `cortex-ai-gateway-langchain-mcp.ipynb`
+   - **CoCo Getting Started:** Run `coco-getting-started/setup.sql`, then follow the 3-tier prompts in the speaker notes
 
 ---
 
