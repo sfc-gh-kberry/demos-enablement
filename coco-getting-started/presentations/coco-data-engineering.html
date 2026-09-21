@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cortex Code for Data Engineering — CoCo DE Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0F1B2D;
+  --sidebar-bg: #1B2A4A;
+  --primary: #29B5E8;
+  --accent: #7C3AED;
+  --text: #E2E8F0;
+  --text-muted: #94A3B8;
+  --card-bg: #162236;
+  --border: #2D4A6F;
+  --green: #10B981;
+  --orange: #F59E0B;
+  --red: #EF4444;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+/* Progress Bar */
+#progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  z-index: 1000;
+  transition: width 0.3s ease;
+}
+
+/* Sidebar */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 260px;
+  height: 100vh;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  padding: 2rem 1.25rem;
+  z-index: 100;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-logo {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--primary);
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sidebar nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 400;
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sidebar nav a:hover {
+  color: var(--text);
+  background: rgba(41, 181, 232, 0.08);
+}
+
+.sidebar nav a.active {
+  color: var(--primary);
+  background: rgba(41, 181, 232, 0.12);
+  font-weight: 500;
+}
+
+.sidebar nav a .nav-number {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 1.4rem;
+}
+
+.sidebar nav a.active .nav-number {
+  color: var(--primary);
+}
+
+/* Main Content */
+.main {
+  margin-left: 260px;
+  scroll-behavior: smooth;
+}
+
+section {
+  min-height: 100vh;
+  padding: 4rem 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+section.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Typography */
+h1 {
+  font-size: 2.75rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, var(--text), var(--primary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+}
+
+.subtitle {
+  font-size: 1.15rem;
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+  font-weight: 300;
+}
+
+/* Stat Cards (Hero) */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  margin-top: 2.5rem;
+}
+
+.stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.stat-card .stat-value {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.stat-card .stat-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+/* Card Grid */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.card h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--primary);
+}
+
+.card ul {
+  list-style: none;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.card ul li {
+  padding: 0.3rem 0;
+  border-bottom: 1px solid rgba(45, 74, 111, 0.4);
+}
+
+.card ul li:last-child {
+  border-bottom: none;
+}
+
+.card ul li strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Highlight Box */
+.highlight-box {
+  background: linear-gradient(135deg, rgba(41, 181, 232, 0.08), rgba(124, 58, 237, 0.08));
+  border: 1px solid rgba(41, 181, 232, 0.3);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  margin-top: 2rem;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.highlight-box strong {
+  color: var(--primary);
+}
+
+/* Badge */
+.badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  background: rgba(41, 181, 232, 0.15);
+  color: var(--primary);
+  margin-bottom: 1.5rem;
+}
+
+.badge.green { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+.badge.orange { background: rgba(245, 158, 11, 0.15); color: var(--orange); }
+.badge.red { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+
+/* Code Block */
+.code-block {
+  background: #0D1520;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  margin-top: 1rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  overflow-x: auto;
+  line-height: 1.7;
+}
+
+.code-block .comment { color: #4A6A8A; }
+.code-block .keyword { color: var(--primary); }
+.code-block .string { color: var(--green); }
+
+/* Prompt List */
+.prompt-list {
+  list-style: none;
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.prompt-list li {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  font-size: 0.88rem;
+  color: var(--text);
+  position: relative;
+  padding-left: 3rem;
+}
+
+.prompt-list li::before {
+  content: attr(data-num);
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: rgba(41, 181, 232, 0.12);
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.prompt-list li code {
+  color: var(--green);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+}
+
+/* Two Column */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.two-col .col {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.two-col .col h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.two-col .col.problem h3 { color: var(--orange); }
+.two-col .col.solution h3 { color: var(--green); }
+
+.two-col .col p {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+/* Architecture Flow */
+.flow-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2.5rem;
+  flex-wrap: wrap;
+}
+
+.flow-stage {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  text-align: center;
+  min-width: 200px;
+}
+
+.flow-stage .stage-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.flow-stage .stage-content {
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.flow-arrow {
+  font-size: 1.5rem;
+  color: var(--primary);
+}
+
+/* Takeaway Cards */
+.takeaway-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.takeaway-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.75rem;
+}
+
+.takeaway-card h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+}
+
+.takeaway-card p {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+/* Context Box */
+.context-box {
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  margin-top: 1.5rem;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.context-box strong {
+  color: var(--accent);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  section { padding: 3rem 1.5rem; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .card-grid, .takeaway-grid { grid-template-columns: 1fr; }
+  .two-col { grid-template-columns: 1fr; }
+  h1 { font-size: 2rem; }
+}
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">CoCo Data Engineering Lab</div>
+  <nav>
+    <a href="#slide-1"><span class="nav-number">01</span> Overview</a>
+    <a href="#slide-2"><span class="nav-number">02</span> The Challenge</a>
+    <a href="#slide-3"><span class="nav-number">03</span> Lab Setup</a>
+    <a href="#slide-4"><span class="nav-number">04</span> Tier 1: Explore</a>
+    <a href="#slide-5"><span class="nav-number">05</span> Tier 2: Transform</a>
+    <a href="#slide-6"><span class="nav-number">06</span> Tier 3: Skill</a>
+    <a href="#slide-7"><span class="nav-number">07</span> Architecture</a>
+    <a href="#slide-8"><span class="nav-number">08</span> Takeaway</a>
+  </nav>
+</aside>
+
+<main class="main">
+
+  <!-- Slide 1: Hero -->
+  <section id="slide-1">
+    <h1>Cortex Code for Data Engineering</h1>
+    <p class="subtitle">Standardizing Vendor Data at Acme Financial</p>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-value">3</div>
+        <div class="stat-label">Vendor Feeds</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">1,500</div>
+        <div class="stat-label">Raw Transactions</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">30 min</div>
+        <div class="stat-label">Lab Duration</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">1</div>
+        <div class="stat-label">Reusable Skill</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 2: The Challenge -->
+  <section id="slide-2">
+    <h2>Three Vendors, Three Formats, One Problem</h2>
+    <p class="subtitle">Each payment processor sends data in a completely different shape</p>
+    <div class="card-grid">
+      <div class="card">
+        <h3>PayRight (Vendor A)</h3>
+        <ul>
+          <li><strong>Dates:</strong> MM/DD/YYYY</li>
+          <li><strong>Amounts:</strong> $1,234.56</li>
+          <li><strong>Names:</strong> ALL CAPS</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>SwiftPay (Vendor B)</h3>
+        <ul>
+          <li><strong>Dates:</strong> YYYY-MM-DD</li>
+          <li><strong>Amounts:</strong> 1234.56</li>
+          <li><strong>Names:</strong> Title Case</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>QuickSettle (Vendor C)</h3>
+        <ul>
+          <li><strong>Dates:</strong> DD-Mon-YY</li>
+          <li><strong>Amounts:</strong> 123456 (cents)</li>
+          <li><strong>Names:</strong> lowercase</li>
+        </ul>
+      </div>
+    </div>
+    <div class="highlight-box">
+      <strong>Goal:</strong> Unify into a single FACT_TRANSACTION with consistent schema — using CoCo to write the SQL for us.
+    </div>
+  </section>
+
+  <!-- Slide 3: Lab Setup -->
+  <section id="slide-3">
+    <h2>Setup (Pre-Lab)</h2>
+    <p class="subtitle">One script creates the database, schemas, and sample data</p>
+    <span class="badge green">~30 seconds</span>
+    <div class="code-block">
+<span class="comment">-- setup.sql creates the database + 3 raw tables</span>
+<span class="keyword">CREATE DATABASE IF NOT EXISTS</span> COCO_DE_LAB;
+<span class="keyword">CREATE SCHEMA</span> COCO_DE_LAB.RAW;
+
+<span class="comment">-- 500 rows per vendor, realistic synthetic data</span>
+<span class="keyword">CREATE TABLE</span> RAW.VENDOR_A_TRANSACTIONS (...);
+<span class="keyword">CREATE TABLE</span> RAW.VENDOR_B_TRANSACTIONS (...);
+<span class="keyword">CREATE TABLE</span> RAW.VENDOR_C_TRANSACTIONS (...);
+    </div>
+    <div class="code-block" style="margin-top: 1rem;">
+<span class="comment">-- Verify setup</span>
+<span class="keyword">SELECT</span> <span class="string">'VENDOR_A'</span> <span class="keyword">AS</span> source, COUNT(*) <span class="keyword">FROM</span> RAW.VENDOR_A_TRANSACTIONS
+<span class="keyword">UNION ALL</span>
+<span class="keyword">SELECT</span> <span class="string">'VENDOR_B'</span>, COUNT(*) <span class="keyword">FROM</span> RAW.VENDOR_B_TRANSACTIONS
+<span class="keyword">UNION ALL</span>
+<span class="keyword">SELECT</span> <span class="string">'VENDOR_C'</span>, COUNT(*) <span class="keyword">FROM</span> RAW.VENDOR_C_TRANSACTIONS;
+    </div>
+  </section>
+
+  <!-- Slide 4: Tier 1 -->
+  <section id="slide-4">
+    <h2>Tier 1: Explore & Understand</h2>
+    <p class="subtitle">Snowsight + CoCo Sidebar</p>
+    <span class="badge green">Beginner · ~8 min</span>
+    <ol class="prompt-list">
+      <li data-num="1">"What tables are in COCO_DE_LAB.RAW?"</li>
+      <li data-num="2">"Profile VENDOR_A_TRANSACTIONS — show me row counts, nulls, and sample values for each column"</li>
+      <li data-num="3">"Compare the schemas across all 3 vendor tables. What are the differences?"</li>
+      <li data-num="4">"What data quality issues do you see in VENDOR_C_TRANSACTIONS?"</li>
+    </ol>
+    <div class="highlight-box">
+      <strong>Key Value:</strong> Instant data profiling and issue detection without writing SQL
+    </div>
+  </section>
+
+  <!-- Slide 5: Tier 2 -->
+  <section id="slide-5">
+    <h2>Tier 2: Transform & Standardize</h2>
+    <p class="subtitle">Snowsight + CoCo Sidebar</p>
+    <span class="badge orange">Intermediate · ~12 min</span>
+    <ol class="prompt-list">
+      <li data-num="1">"Create a staging view that cleans VENDOR_A_TRANSACTIONS: parse dates to DATE type, strip $ and commas from amounts, title-case the merchant names"</li>
+      <li data-num="2">"Do the same for VENDOR_B and VENDOR_C, mapping to the same output schema"</li>
+      <li data-num="3">"Union all 3 staging views into a single FACT_TRANSACTION dynamic table with a 1-hour target lag"</li>
+    </ol>
+    <div class="highlight-box">
+      <strong>Key Value:</strong> Iterative SQL development — CoCo remembers context and builds on previous work
+    </div>
+  </section>
+
+  <!-- Slide 6: Tier 3 -->
+  <section id="slide-6">
+    <h2>Tier 3: Build a Reusable Skill</h2>
+    <p class="subtitle">CoCo CLI (Terminal)</p>
+    <span class="badge red">Advanced · ~10 min</span>
+    <div class="two-col">
+      <div class="col problem">
+        <h3>The Problem</h3>
+        <p>What happens when Vendor D shows up next month? Write it all again from scratch?</p>
+      </div>
+      <div class="col solution">
+        <h3>The Solution</h3>
+        <p>Create a CoCo skill that encodes the pattern: raw table → dbt staging model + schema.yml + sources.yml</p>
+      </div>
+    </div>
+    <div class="code-block" style="margin-top: 1.5rem;">
+<span class="comment"># Invoke the skill in CoCo CLI</span>
+<span class="keyword">$dbt-ingest-pipeline</span>
+
+<span class="comment"># Then provide context:</span>
+<span class="string">"Here's a new vendor table VENDOR_D_TRANSACTIONS with columns</span>
+<span class="string"> TXN_ID, PROC_DATE, AMT_MINOR_UNITS, MERCHANT, CARD_TOKEN"</span>
+    </div>
+    <div class="context-box">
+      <strong>The skill generates:</strong> staging model SQL, schema.yml with tests, sources.yml with freshness checks
+    </div>
+  </section>
+
+  <!-- Slide 7: Architecture -->
+  <section id="slide-7">
+    <h2>Architecture</h2>
+    <p class="subtitle">What we built in 30 minutes</p>
+    <div class="flow-diagram">
+      <div class="flow-stage">
+        <div class="stage-label">Raw</div>
+        <div class="stage-content">VENDOR_A_TRANSACTIONS<br>VENDOR_B_TRANSACTIONS<br>VENDOR_C_TRANSACTIONS</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-stage">
+        <div class="stage-label">Staging</div>
+        <div class="stage-content">STG_VENDOR_A<br>STG_VENDOR_B<br>STG_VENDOR_C</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-stage">
+        <div class="stage-label">Mart</div>
+        <div class="stage-content">FACT_TRANSACTION<br><small style="color: var(--text-muted);">(Dynamic Table, 1h lag)</small></div>
+      </div>
+    </div>
+    <div class="highlight-box" style="margin-top: 2.5rem;">
+      Repeatable pattern for any new vendor via CoCo skill
+    </div>
+  </section>
+
+  <!-- Slide 8: Takeaway -->
+  <section id="slide-8">
+    <h2>The Pattern</h2>
+    <p class="subtitle">A workflow you can apply to every new data source</p>
+    <div class="takeaway-grid">
+      <div class="takeaway-card">
+        <h3>Explore</h3>
+        <p>Ask CoCo to profile and compare — skip the manual SQL</p>
+      </div>
+      <div class="takeaway-card">
+        <h3>Transform</h3>
+        <p>Iterate with CoCo to build standardization logic conversationally</p>
+      </div>
+      <div class="takeaway-card">
+        <h3>Codify</h3>
+        <p>Package the pattern as a skill — onboard new vendors in minutes</p>
+      </div>
+    </div>
+    <div class="highlight-box" style="margin-top: 2rem;">
+      <strong>Every new vendor feed follows the same workflow:</strong> Explore → Transform → Codify
+    </div>
+  </section>
+
+</main>
+
+<script>
+// Progress bar
+const progressBar = document.getElementById('progress-bar');
+const mainEl = document.querySelector('.main');
+
+window.addEventListener('scroll', () => {
+  const scrollTop = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const progress = (scrollTop / docHeight) * 100;
+  progressBar.style.width = progress + '%';
+});
+
+// IntersectionObserver for active sidebar links and fade-in
+const sections = document.querySelectorAll('section');
+const navLinks = document.querySelectorAll('.sidebar nav a');
+
+const observerOptions = {
+  root: null,
+  rootMargin: '-20% 0px -60% 0px',
+  threshold: 0
+};
+
+const sectionObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      // Update active nav link
+      const id = entry.target.id;
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+      });
+    }
+  });
+}, observerOptions);
+
+// Fade-in observer
+const fadeObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.15 });
+
+sections.forEach(section => {
+  sectionObserver.observe(section);
+  fadeObserver.observe(section);
+});
+
+// Smooth scroll for nav links
+navLinks.forEach(link => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    target.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+</script>
+
+</body>
+</html>
