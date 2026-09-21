@@ -287,23 +287,95 @@
   <span class="badge">Architecture</span>
   <h2>End-to-End: Gateway + Agent + MCP</h2>
   <p style="margin-bottom: 16px;">A LangChain agent routes inference through the gateway and accesses Snowflake data via MCP tools.</p>
-  <div class="mermaid-wrap">
-    <pre class="mermaid">
-flowchart LR
-    U["User Question"] --> A["LangChain Agent<br/>(ReAct)"]
-    A -->|inference| GW["Cortex AI Gateway<br/>/api/v2/aigateways/snowflake/v1"]
-    GW --> LLM["GPT-5.4 / Claude<br/>(Snowflake-hosted)"]
-    LLM --> GW
-    GW -->|traces| OBS["AGENT_TRACE_TABLE<br/>AI_GATEWAY_USAGE_HISTORY"]
-    A -->|tool calls| MCP["MCP Server<br/>(MARKETING_MCP)"]
-    MCP --> CA["Cortex Analyst<br/>(Semantic View)"]
-    MCP --> CS["Cortex Search<br/>(Strategy Docs)"]
-    MCP --> SQL["Execute SQL<br/>(Result Rows)"]
+  <div class="mermaid-wrap" style="text-align:center;">
+    <svg viewBox="0 0 780 450" xmlns="http://www.w3.org/2000/svg" style="max-width:780px;width:100%;height:auto;">
+      <style>
+        .box { rx: 10; ry: 10; }
+        .box-default { fill: light-dark(#ffffff,#1e293b); stroke: light-dark(#cbd5e1,#475569); stroke-width: 1.5; }
+        .box-gateway { fill: #0369a1; stroke: #38bdf8; stroke-width: 1.5; }
+        .box-mcp { fill: #065f46; stroke: #6ee7b7; stroke-width: 1.5; }
+        .box-obs { fill: #7c3aed; stroke: #c4b5fd; stroke-width: 1.5; }
+        .label-dark { font-family: -apple-system, system-ui, sans-serif; fill: light-dark(#0f172a,#f1f5f9); font-weight: 600; }
+        .label-sub { font-family: -apple-system, system-ui, sans-serif; fill: light-dark(#64748b,#94a3b8); }
+        .label-white { font-family: -apple-system, system-ui, sans-serif; fill: #ffffff; font-weight: 600; }
+        .label-light { font-family: -apple-system, system-ui, sans-serif; fill: #bae6fd; }
+        .label-purple { font-family: -apple-system, system-ui, sans-serif; fill: #ddd6fe; }
+        .arrow { stroke: light-dark(#94a3b8,#64748b); stroke-width: 1.5; fill: none; marker-end: url(#ah); }
+        .arrow-purple { stroke: #a78bfa; stroke-width: 1.5; fill: none; marker-end: url(#ah-purple); }
+        .arrow-label { font-family: -apple-system, system-ui, sans-serif; font-size: 11px; fill: light-dark(#64748b,#94a3b8); }
+        .arrow-label-purple { font-family: -apple-system, system-ui, sans-serif; font-size: 11px; fill: #a78bfa; }
+      </style>
+      <defs>
+        <marker id="ah" viewBox="0 0 10 8" refX="10" refY="4" markerWidth="8" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,4 L0,8Z" fill="light-dark(#94a3b8,#64748b)"/>
+        </marker>
+        <marker id="ah-purple" viewBox="0 0 10 8" refX="10" refY="4" markerWidth="8" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,4 L0,8Z" fill="#a78bfa"/>
+        </marker>
+      </defs>
 
-    style GW fill:#0369a1,stroke:#7dd3fc,color:#fff
-    style MCP fill:#065f46,stroke:#6ee7b7,color:#fff
-    style OBS fill:#7c3aed,stroke:#c4b5fd,color:#fff
-    </pre>
+      <!-- Row 1: User Question -->
+      <rect class="box box-default" x="250" y="10" width="200" height="44"/>
+      <text class="label-dark" x="350" y="38" text-anchor="middle" font-size="14">User Question</text>
+
+      <!-- Arrow: User → Agent -->
+      <line class="arrow" x1="350" y1="54" x2="350" y2="88"/>
+
+      <!-- Row 2: LangChain Agent -->
+      <rect class="box box-default" x="225" y="90" width="250" height="50"/>
+      <text class="label-dark" x="350" y="115" text-anchor="middle" font-size="14">LangChain Agent</text>
+      <text class="label-sub" x="350" y="132" text-anchor="middle" font-size="11">(ReAct)</text>
+
+      <!-- Arrow: Agent → Gateway (left branch) -->
+      <line class="arrow" x1="290" y1="140" x2="290" y2="188"/>
+      <text class="arrow-label" x="258" y="170" text-anchor="middle">inference</text>
+
+      <!-- Arrow: Agent → MCP (right branch) -->
+      <line class="arrow" x1="410" y1="140" x2="410" y2="188"/>
+      <text class="arrow-label" x="448" y="170" text-anchor="middle">tool calls</text>
+
+      <!-- Row 3 Left: AI Gateway -->
+      <rect class="box box-gateway" x="140" y="190" width="240" height="54"/>
+      <text class="label-white" x="260" y="215" text-anchor="middle" font-size="14">Cortex AI Gateway</text>
+      <text class="label-light" x="260" y="234" text-anchor="middle" font-size="10">/api/v2/aigateways/snowflake/v1</text>
+
+      <!-- Row 3 Right: MCP Server -->
+      <rect class="box box-mcp" x="400" y="190" width="280" height="54"/>
+      <text class="label-white" x="540" y="215" text-anchor="middle" font-size="14">MCP Server</text>
+      <text style="font-family:-apple-system,system-ui,sans-serif;fill:#86efac;font-size:10px;" x="540" y="234" text-anchor="middle">MARKETING_MCP</text>
+
+      <!-- Arrow: Gateway → LLM -->
+      <line class="arrow" x1="260" y1="244" x2="260" y2="298"/>
+
+      <!-- Arrows: MCP → Tools (one per tool, straight down) -->
+      <line class="arrow" x1="450" y1="244" x2="450" y2="298"/>
+      <line class="arrow" x1="550" y1="244" x2="550" y2="298"/>
+      <line class="arrow" x1="640" y1="244" x2="640" y2="298"/>
+
+      <!-- Row 4 Left: LLM -->
+      <rect class="box box-default" x="160" y="300" width="200" height="50"/>
+      <text class="label-dark" x="260" y="325" text-anchor="middle" font-size="13">GPT-5.4 / Claude</text>
+      <text class="label-sub" x="260" y="342" text-anchor="middle" font-size="11">(Snowflake-hosted)</text>
+
+      <!-- Row 4 Right: 3 Tool boxes in a single row -->
+      <rect class="box box-default" x="400" y="300" width="100" height="40"/>
+      <text class="label-dark" x="450" y="324" text-anchor="middle" font-size="11">Analyst</text>
+
+      <rect class="box box-default" x="505" y="300" width="100" height="40"/>
+      <text class="label-dark" x="555" y="324" text-anchor="middle" font-size="11">Execute SQL</text>
+
+      <rect class="box box-default" x="610" y="300" width="100" height="40"/>
+      <text class="label-dark" x="660" y="324" text-anchor="middle" font-size="11">Search</text>
+
+      <!-- Arrow: Gateway → Observability (L-shaped, starts from gateway left edge) -->
+      <path class="arrow-purple" d="M140,217 L80,217 L80,400 L180,400"/>
+      <text class="arrow-label-purple" x="56" y="320" text-anchor="middle" transform="rotate(-90,56,320)">traces</text>
+
+      <!-- Row 5: Observability -->
+      <rect class="box box-obs" x="180" y="380" width="340" height="54"/>
+      <text class="label-white" x="350" y="405" text-anchor="middle" font-size="13">AGENT_TRACE_TABLE('SNOWFLAKE')</text>
+      <text class="label-purple" x="350" y="424" text-anchor="middle" font-size="11">AI_GATEWAY_USAGE_HISTORY</text>
+    </svg>
   </div>
   <div class="flow-steps" style="margin-top: 16px;">
     <span class="flow-step">PAT Auth</span>
@@ -562,12 +634,7 @@ flowchart LR
 
 <!-- ═══════════════ LIBRARIES ═══════════════ -->
 <script src="/libs/chart.js@4.4.4/chart.umd.js"></script>
-<script src="/libs/mermaid@10.9.6/mermaid.min.js"></script>
 <script>
-  mermaid.initialize({ startOnLoad: true, securityLevel: 'strict',
-    theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default'
-  });
-
   new Chart(document.getElementById('tokenChart'), {
     type: 'bar',
     data: {

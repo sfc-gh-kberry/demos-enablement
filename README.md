@@ -28,6 +28,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
   - [Agent Observability & Analysis](#agent-observability--analysis)
   - [Agentic Schema Mapping](#agentic-schema-mapping)
   - [Proactive Fraud Detection Agent](#proactive-fraud-detection-agent)
+  - [Cortex AI Gateway](#cortex-ai-gateway)
 - [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Presentation Format](#presentation-format)
@@ -36,7 +37,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
 
 ## Overview
 
-This repository contains twenty enablement modules covering key Cortex AI and Snowflake ML topics:
+This repository contains twenty-one enablement modules covering key Cortex AI and Snowflake ML topics:
 
 | Module | Audience | Format | Slides |
 |--------|----------|--------|--------|
@@ -60,6 +61,7 @@ This repository contains twenty enablement modules covering key Cortex AI and Sn
 | Agent Observability & Analysis | SEs, ML Engineers, Platform Teams | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/agent_observability_analysis/presentations/agent-observability-analysis.html) |
 | Agentic Schema Mapping | SEs, Data Engineers, Customers | Presentation + Demo | [View](https://sfc-gh-perickson.github.io/demos-enablement/agentic-schema-mapping/presentations/schema-mapper-demo.html) |
 | Proactive Fraud Detection Agent | SEs, Data Scientists, Customers | Presentation + End-to-End Demo App | [View](https://sfc-gh-perickson.github.io/demos-enablement/proactive-fraud-agent/presentations/proactive-fraud-detection-agent.html) |
+| Cortex AI Gateway | SEs, Solution Architects, Platform Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/cortex-ai-gateway/cortex-ai-gateway-presentation.html) |
 
 Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, feature-store, cortex-ai-observability, cortex-agent-multi-tenancy, and label-studio-spcs modules also provide complete hands-on labs with SQL setup and notebooks.
 
@@ -661,6 +663,33 @@ End-to-end proactive fraud detection pipeline combining ML model training, SHAP 
 
 ---
 
+### Cortex AI Gateway
+
+**Location:** `cortex-ai-gateway/`
+
+Demonstrates Snowflake's Cortex AI Gateway as a centralized LLM inference layer, combined with a LangChain agent that queries Snowflake data through the Model Context Protocol (MCP). Shows how the gateway provides OpenAI-compatible inference, model governance, and automatic observability — all queryable via SQL.
+
+**Topics covered:**
+- AI Gateway configuration (model allowlists, logging, payload capture)
+- LangChain `ChatOpenAI` integration via gateway inference endpoint
+- MCP Server with Cortex Analyst, Cortex Search, and SQL execution tools
+- Agent tool chaining (Analyst generates SQL → execute_sql returns data)
+- Observability deep-dive: trace table, conversation chain reconstruction, credit metering
+- Admin controls: model restriction, role grants, usage quotas
+
+**Contents:**
+- `setup.sql` — Database, tables, semantic view, Cortex Search, MCP server, gateway spec
+- `cortex-ai-gateway-langchain-mcp.ipynb` — End-to-end hands-on notebook
+- `cortex-ai-gateway-presentation.html` — 10-slide presentation
+
+**Prerequisites:**
+1. Snowflake account with ACCOUNTADMIN privileges
+2. PAT token in `~/.snowflake/connections.toml`
+3. Python 3.11+ with `langchain-openai`, `langchain-mcp-adapters`, `langgraph`, `snowflake-connector-python`
+4. Run `setup.sql` before starting the notebook
+
+---
+
 ## Repository Structure
 
 ```
@@ -709,6 +738,10 @@ enablement/
 │   └── presentations/
 │       ├── agent-observability-analysis.html
 │       └── agent-observability-analysis-speaker-notes.md
+├── cortex-ai-gateway/
+│   ├── setup.sql
+│   ├── cortex-ai-gateway-langchain-mcp.ipynb
+│   └── cortex-ai-gateway-presentation.html
 ├── cortex-agent-cost-observability/
 │   ├── lab/
 │   │   ├── setup.sql
@@ -841,6 +874,7 @@ enablement/
    - **Agent Observability & Analysis:** Follow notebook Section 1 in `agent_observability_analysis/observability-to-evals.ipynb` (self-contained setup)
    - **Agentic Schema Mapping:** Run `setup.sql`, `seed_reference_data.sql`, then `deploy.sql` in the `agentic-schema-mapping/` directory
    - **Proactive Fraud Detection Agent:** Run scripts `01`-`06` in `proactive-fraud-agent/setup/`, then `cd app && npm install && snow app deploy`
+   - **Cortex AI Gateway:** Run `cortex-ai-gateway/setup.sql`, then open `cortex-ai-gateway-langchain-mcp.ipynb`
 
 ---
 
