@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="snowflake-source" content="cortex-agent-authored" />
+  <title>Cortex AI Gateway: Centralized AI Access for Enterprise Agents</title>
+  <script type="application/json" id="snowflake-report-metadata">
+  {
+    "generated": "2026-09-21",
+    "intent": "Presentation on Cortex AI Gateway with LangChain agent + MCP use case",
+    "sections": [
+      { "id": "slide-observability-data", "title": "Observability data",
+        "dataSources": [
+          { "type": "query", "sql": "SELECT TRACE:trace_id::STRING, RECORD:name::STRING, RECORD_ATTRIBUTES FROM TABLE(AGENT_TRACE_TABLE('SNOWFLAKE')) WHERE TIMESTAMP > DATEADD('hour', -1, CURRENT_TIMESTAMP()) ORDER BY TIMESTAMP DESC LIMIT 10" },
+          { "type": "query", "sql": "SELECT f.key AS MODEL, COUNT(*), SUM(f.value:\"input_tokens\"::INT), SUM(f.value:\"output_tokens\"::INT), SUM(CREDITS) FROM SNOWFLAKE.ACCOUNT_USAGE.AI_GATEWAY_USAGE_HISTORY, LATERAL FLATTEN(input => OPERATION_DETAILS) f WHERE START_TIME > DATEADD('day', -1, CURRENT_TIMESTAMP()) GROUP BY f.key" }
+        ],
+        "producerNotes": "Charts embed live data from the demo session; re-run queries to refresh." }
+    ]
+  }
+  </script>
+  <style>
+    :root { color-scheme: light dark; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, system-ui, 'Segoe UI', sans-serif;
+      color: light-dark(#1e293b, #e2e8f0);
+      background: light-dark(#f8fafc, #0f172a);
+      line-height: 1.6;
+    }
+    img, svg { max-width: 100%; height: auto; }
+
+    .slide {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: clamp(24px, 6vw, 80px);
+      max-width: 1100px;
+      margin: 0 auto;
+      border-bottom: 1px solid light-dark(#e2e8f0, #1e293b);
+    }
+    .slide:last-of-type { border-bottom: none; }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: light-dark(#0f172a, #f1f5f9);
+      margin-bottom: 16px;
+    }
+    h2 {
+      font-size: clamp(1.5rem, 3.5vw, 2.2rem);
+      font-weight: 700;
+      color: light-dark(#0f172a, #f1f5f9);
+      margin-bottom: 20px;
+    }
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: light-dark(#334155, #94a3b8);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    p, li {
+      font-size: clamp(1rem, 2vw, 1.15rem);
+      color: light-dark(#475569, #cbd5e1);
+    }
+    ul { list-style: none; padding: 0; }
+    ul li { padding: 8px 0; padding-left: 24px; position: relative; }
+    ul li::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 16px;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #29B5E8;
+    }
+
+    .subtitle {
+      font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+      color: light-dark(#64748b, #94a3b8);
+      margin-bottom: 32px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: light-dark(#e0f2fe, #0c4a6e);
+      color: light-dark(#0369a1, #7dd3fc);
+      margin-bottom: 16px;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      margin: 24px 0;
+    }
+    .card {
+      background: light-dark(#ffffff, #1e293b);
+      border: 1px solid light-dark(#e2e8f0, #334155);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .card h4 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: light-dark(#0f172a, #f1f5f9);
+      margin-bottom: 8px;
+    }
+    .card p { font-size: 0.95rem; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+    .stat {
+      background: light-dark(#ffffff, #1e293b);
+      border: 1px solid light-dark(#e2e8f0, #334155);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    .stat .num {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #29B5E8;
+    }
+    .stat .label {
+      font-size: 0.85rem;
+      color: light-dark(#64748b, #94a3b8);
+      margin-top: 4px;
+    }
+
+    code, .code-block {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.9rem;
+    }
+    code {
+      background: light-dark(#f1f5f9, #1e293b);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .code-block {
+      background: light-dark(#1e293b, #020617);
+      color: #e2e8f0;
+      padding: 20px;
+      border-radius: 10px;
+      overflow-x: auto;
+      margin: 16px 0;
+      line-height: 1.5;
+    }
+    .code-block .kw { color: #c084fc; }
+    .code-block .str { color: #86efac; }
+    .code-block .cm { color: #64748b; }
+    .code-block .fn { color: #7dd3fc; }
+
+    .table-wrap { overflow-x: auto; margin: 16px 0; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid light-dark(#d1d5db, #374151); padding: 8px 12px; text-align: left; font-size: 0.95rem; }
+    th { background: light-dark(#f3f4f6, #1e293b); font-weight: 600; color: light-dark(#0f172a, #f1f5f9); }
+
+    .highlight { color: #29B5E8; font-weight: 700; }
+    .mermaid-wrap { margin: 24px 0; overflow-x: auto; }
+    .chart-box { position: relative; width: 100%; height: 280px; margin: 20px 0; }
+    .chart-box > canvas { width: 100% !important; height: 100% !important; }
+
+    .flow-steps {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin: 16px 0;
+    }
+    .flow-step {
+      background: light-dark(#ffffff, #1e293b);
+      border: 1px solid light-dark(#e2e8f0, #334155);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: light-dark(#1e293b, #e2e8f0);
+    }
+    .flow-arrow { color: #29B5E8; font-size: 1.2rem; font-weight: 700; }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 32px;
+      margin: 20px 0;
+    }
+
+    @media (max-width: 600px) {
+      .slide { padding: 24px 16px; min-height: auto; padding-top: 48px; padding-bottom: 48px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ SLIDE 1: TITLE ═══════════════ -->
+<section class="slide">
+  <span class="badge">Snowflake Cortex</span>
+  <h1>Cortex AI Gateway</h1>
+  <p class="subtitle">Centralized LLM access, model governance, and observability for enterprise AI agents — with a LangChain + MCP demo</p>
+  <div style="margin-top: 32px;">
+    <div class="flow-steps">
+      <span class="flow-step">LangChain Agent</span>
+      <span class="flow-arrow">&rarr;</span>
+      <span class="flow-step" style="border-color: #29B5E8;">AI Gateway</span>
+      <span class="flow-arrow">&rarr;</span>
+      <span class="flow-step">MCP Server</span>
+      <span class="flow-arrow">&rarr;</span>
+      <span class="flow-step">Snowflake Data</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ SLIDE 2: THE PROBLEM ═══════════════ -->
+<section class="slide">
+  <span class="badge">The Challenge</span>
+  <h2>Why You Need an AI Gateway</h2>
+  <p style="margin-bottom: 24px;">As teams adopt LLMs across the organization, common pain points emerge:</p>
+  <div class="card-grid">
+    <div class="card">
+      <h4>Fragmented Access</h4>
+      <p>Every team manages their own API keys, endpoints, and SDKs. No single point of control for who calls what model.</p>
+    </div>
+    <div class="card">
+      <h4>Zero Visibility</h4>
+      <p>No centralized view of token usage, latency, or cost. Teams can't answer "how much are we spending on LLMs?"</p>
+    </div>
+    <div class="card">
+      <h4>No Model Governance</h4>
+      <p>Can't restrict which models are used, enforce compliance policies, or swap models without touching every application.</p>
+    </div>
+    <div class="card">
+      <h4>Credential Sprawl</h4>
+      <p>API keys scattered across notebooks, apps, and CI pipelines. Rotating a key means touching dozens of configs.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ SLIDE 3: WHAT IS IT ═══════════════ -->
+<section class="slide">
+  <span class="badge">The Solution</span>
+  <h2>What is Cortex AI Gateway?</h2>
+  <p style="margin-bottom: 24px;">A centralized, OpenAI-compatible inference endpoint built into every Snowflake account.</p>
+  <div class="card-grid">
+    <div class="card">
+      <h4>Auto-Provisioned</h4>
+      <p>One gateway per account (named <code>SNOWFLAKE</code>). No setup required — it's already there.</p>
+    </div>
+    <div class="card">
+      <h4>OpenAI-Compatible API</h4>
+      <p>Any SDK or framework that speaks <code>/v1/chat/completions</code> works. Just change <code>base_url</code>.</p>
+    </div>
+    <div class="card">
+      <h4>Model Allowlists</h4>
+      <p>Control which models are permitted with glob patterns: <code>'*'</code> for all, <code>'claude-*'</code> to restrict.</p>
+    </div>
+    <div class="card">
+      <h4>Built-in Observability</h4>
+      <p>Every call traced with OpenTelemetry — tokens, latency, payloads — queryable via SQL.</p>
+    </div>
+  </div>
+  <div class="code-block">
+    <span class="cm">-- That's the entire setup:</span><br>
+    <span class="kw">ALTER</span> AI GATEWAY SNOWFLAKE <span class="kw">FROM</span> SPECIFICATION $$<br>
+    models:<br>
+    &nbsp;&nbsp;- name: <span class="str">'*'</span><br>
+    logging:<br>
+    &nbsp;&nbsp;enabled: <span class="str">true</span><br>
+    &nbsp;&nbsp;capture_payload:<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;request_response: <span class="str">true</span><br>
+    $$;
+  </div>
+</section>
+
+<!-- ═══════════════ SLIDE 4: ARCHITECTURE ═══════════════ -->
+<section class="slide">
+  <span class="badge">Architecture</span>
+  <h2>End-to-End: Gateway + Agent + MCP</h2>
+  <p style="margin-bottom: 16px;">A LangChain agent routes inference through the gateway and accesses Snowflake data via MCP tools.</p>
+  <div class="mermaid-wrap">
+    <pre class="mermaid">
+flowchart LR
+    U["User Question"] --> A["LangChain Agent<br/>(ReAct)"]
+    A -->|inference| GW["Cortex AI Gateway<br/>/api/v2/aigateways/snowflake/v1"]
+    GW --> LLM["GPT-5.4 / Claude<br/>(Snowflake-hosted)"]
+    LLM --> GW
+    GW -->|traces| OBS["AGENT_TRACE_TABLE<br/>AI_GATEWAY_USAGE_HISTORY"]
+    A -->|tool calls| MCP["MCP Server<br/>(MARKETING_MCP)"]
+    MCP --> CA["Cortex Analyst<br/>(Semantic View)"]
+    MCP --> CS["Cortex Search<br/>(Strategy Docs)"]
+    MCP --> SQL["Execute SQL<br/>(Result Rows)"]
+
+    style GW fill:#0369a1,stroke:#7dd3fc,color:#fff
+    style MCP fill:#065f46,stroke:#6ee7b7,color:#fff
+    style OBS fill:#7c3aed,stroke:#c4b5fd,color:#fff
+    </pre>
+  </div>
+  <div class="flow-steps" style="margin-top: 16px;">
+    <span class="flow-step">PAT Auth</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step" style="border-color: #29B5E8;">Gateway (inference)</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step" style="border-color: #10b981;">MCP (tools)</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step" style="border-color: #8b5cf6;">Traces (observability)</span>
+  </div>
+</section>
+
+<!-- ═══════════════ SLIDE 5: MCP SERVER ═══════════════ -->
+<section class="slide">
+  <span class="badge">MCP Server</span>
+  <h2>Snowflake as a Tool Provider</h2>
+  <p style="margin-bottom: 16px;">The MCP server exposes Snowflake capabilities as tools — no Cortex Agent wrapper required.</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Tool</th><th>Type</th><th>What It Does</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>query_campaigns</code></td>
+          <td><code>CORTEX_ANALYST_MESSAGE</code></td>
+          <td>Translates natural language to SQL against the semantic view. Returns the query and interpretation.</td>
+        </tr>
+        <tr>
+          <td><code>execute_sql</code></td>
+          <td><code>SYSTEM_EXECUTE_SQL</code></td>
+          <td>Runs the generated SQL and returns actual result rows. Chained after Analyst.</td>
+        </tr>
+        <tr>
+          <td><code>search_strategy_docs</code></td>
+          <td><code>CORTEX_SEARCH_SERVICE_QUERY</code></td>
+          <td>RAG retrieval over strategy documents, methodologies, and planning briefs.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="code-block">
+    <span class="kw">CREATE</span> MCP SERVER MARKETING_MCP <span class="kw">FROM</span> SPECIFICATION $$<br>
+    tools:<br>
+    &nbsp;&nbsp;- name: <span class="str">query_campaigns</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;type: <span class="str">"CORTEX_ANALYST_MESSAGE"</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;identifier: <span class="str">"CORTEX_GATEWAY_LAB.PUBLIC.CMO_ANALYTICS"</span><br>
+    &nbsp;&nbsp;- name: <span class="str">execute_sql</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;type: <span class="str">"SYSTEM_EXECUTE_SQL"</span><br>
+    &nbsp;&nbsp;- name: <span class="str">search_strategy_docs</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;type: <span class="str">"CORTEX_SEARCH_SERVICE_QUERY"</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;identifier: <span class="str">"CORTEX_GATEWAY_LAB.PUBLIC.STRATEGY_SEARCH_SVC"</span><br>
+    $$;
+  </div>
+  <p style="margin-top: 12px;">Clients connect via <span class="highlight">HTTP</span> — no local bridge or npx required.</p>
+</section>
+
+<!-- ═══════════════ SLIDE 6: DEMO WALKTHROUGH ═══════════════ -->
+<section class="slide">
+  <span class="badge">Demo</span>
+  <h2>LangChain Agent in Action</h2>
+  <p style="margin-bottom: 16px;">Three lines to point LangChain at the gateway:</p>
+  <div class="code-block">
+    <span class="kw">from</span> langchain_openai <span class="kw">import</span> ChatOpenAI<br><br>
+    llm = <span class="fn">ChatOpenAI</span>(<br>
+    &nbsp;&nbsp;model=<span class="str">"openai-gpt-5.4"</span>,<br>
+    &nbsp;&nbsp;base_url=<span class="str">f"https://{ACCOUNT}/api/v2/aigateways/snowflake/v1"</span>,<br>
+    &nbsp;&nbsp;api_key=PAT_TOKEN,<br>
+    )
+  </div>
+  <p style="margin: 16px 0;">The agent chains tools to answer data questions:</p>
+  <div class="card-grid" style="grid-template-columns: 1fr;">
+    <div class="card" style="border-left: 3px solid #29B5E8;">
+      <h4>Q: "What was the ROAS by channel for Q4 2024?"</h4>
+      <p style="margin-top: 8px;">
+        <strong>Step 1:</strong> Agent calls <code>query_campaigns</code> &rarr; Cortex Analyst generates SQL<br>
+        <strong>Step 2:</strong> Agent calls <code>execute_sql</code> with the generated SQL &rarr; gets result rows<br>
+        <strong>Step 3:</strong> Agent synthesizes: "Paid Search: 4.02x, Email: 12.35x, Social: 1.68x, Display: 1.34x"
+      </p>
+    </div>
+    <div class="card" style="border-left: 3px solid #10b981;">
+      <h4>Q: "How did Q4 perform against the planning brief targets?"</h4>
+      <p style="margin-top: 8px;">
+        Agent uses <strong>both</strong> tools: <code>query_campaigns</code> + <code>execute_sql</code> for actual numbers, <code>search_strategy_docs</code> for the Q4 brief targets. Compares actual ROAS vs 3.5x target.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ SLIDE 7: OBSERVABILITY ═══════════════ -->
+<section class="slide" id="slide-observability-data">
+  <span class="badge">Observability</span>
+  <h2>Every Call is Traced</h2>
+  <p style="margin-bottom: 16px;">The gateway automatically records OpenTelemetry traces — queryable with SQL.</p>
+
+  <div class="stat-grid">
+    <div class="stat">
+      <div class="num">32</div>
+      <div class="label">Requests (last 24h)</div>
+    </div>
+    <div class="stat">
+      <div class="num">24,474</div>
+      <div class="label">Input Tokens</div>
+    </div>
+    <div class="stat">
+      <div class="num">2,974</div>
+      <div class="label">Output Tokens</div>
+    </div>
+    <div class="stat">
+      <div class="num">0.053</div>
+      <div class="label">Credits Used</div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <h3>Trace Table</h3>
+      <div class="code-block" style="font-size: 0.82rem;">
+        <span class="kw">SELECT</span><br>
+        &nbsp;&nbsp;TRACE:trace_id::<span class="fn">STRING</span>,<br>
+        &nbsp;&nbsp;RECORD:name::<span class="fn">STRING</span> <span class="kw">AS</span> span_name,<br>
+        &nbsp;&nbsp;RECORD_ATTRIBUTES:<span class="str">"gen_ai.usage.input_tokens"</span>,<br>
+        &nbsp;&nbsp;RECORD_ATTRIBUTES:<span class="str">"gen_ai.usage.output_tokens"</span><br>
+        <span class="kw">FROM TABLE</span>(<span class="fn">AGENT_TRACE_TABLE</span>(<span class="str">'SNOWFLAKE'</span>))
+      </div>
+    </div>
+    <div>
+      <h3>Token Usage by Model</h3>
+      <div class="chart-box"><canvas id="tokenChart"></canvas></div>
+    </div>
+  </div>
+
+  <p style="margin-top: 12px;">With <code>capture_payload: true</code>, full request/response content is captured in <code>RECORD_ATTRIBUTES</code> — including tool calls, system prompts, and model outputs.</p>
+</section>
+
+<!-- ═══════════════ SLIDE 8: ADMIN CONTROLS ═══════════════ -->
+<section class="slide">
+  <span class="badge">Governance</span>
+  <h2>Admin Controls</h2>
+  <div class="card-grid">
+    <div class="card">
+      <h4>Model Allowlists</h4>
+      <p>Restrict which models can be called through the gateway.</p>
+      <div class="code-block" style="font-size: 0.82rem; margin-top: 8px;">
+        models:<br>
+        &nbsp;&nbsp;- name: <span class="str">'claude-*'</span> <span class="cm"># Only Claude models</span>
+      </div>
+      <p style="margin-top: 8px;">Non-matching models get HTTP 401.</p>
+    </div>
+    <div class="card">
+      <h4>Role-Based Access</h4>
+      <p>Separate inference from monitoring:</p>
+      <div class="code-block" style="font-size: 0.82rem; margin-top: 8px;">
+        <span class="kw">GRANT USAGE</span> <span class="kw">ON</span> AI GATEWAY SNOWFLAKE<br>
+        &nbsp;&nbsp;<span class="kw">TO ROLE</span> AI_GATEWAY_USER;<br><br>
+        <span class="kw">GRANT MONITOR</span> <span class="kw">ON</span> AI GATEWAY SNOWFLAKE<br>
+        &nbsp;&nbsp;<span class="kw">TO ROLE</span> AI_GATEWAY_MONITOR;
+      </div>
+    </div>
+    <div class="card">
+      <h4>Usage Quotas</h4>
+      <p>Set per-user credit limits with block enforcement. Exceeding the quota returns HTTP 403.</p>
+      <div class="code-block" style="font-size: 0.82rem; margin-top: 8px;">
+        <span class="kw">CALL</span> quota!<span class="fn">SET_PER_USER_LIMIT</span>(<br>
+        &nbsp;&nbsp;1, <span class="str">'DAILY'</span><br>
+        );
+      </div>
+    </div>
+    <div class="card">
+      <h4>Payload Capture</h4>
+      <p>Record full request/response content for compliance, debugging, and audit:</p>
+      <div class="code-block" style="font-size: 0.82rem; margin-top: 8px;">
+        logging:<br>
+        &nbsp;&nbsp;capture_payload:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;request_response: <span class="str">true</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ SLIDE 9: BENEFITS ═══════════════ -->
+<section class="slide">
+  <span class="badge">Summary</span>
+  <h2>Key Benefits</h2>
+  <div class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+    <div class="card" style="border-top: 3px solid #29B5E8;">
+      <h4>Universal Compatibility</h4>
+      <p>OpenAI-compatible API means <strong>any framework works</strong> — LangChain, LlamaIndex, OpenAI SDK, Anthropic SDK, raw HTTP. Change one URL.</p>
+    </div>
+    <div class="card" style="border-top: 3px solid #10b981;">
+      <h4>Centralized Governance</h4>
+      <p>One place to control model access, enforce quotas, and manage credentials. Swap models without touching application code.</p>
+    </div>
+    <div class="card" style="border-top: 3px solid #8b5cf6;">
+      <h4>Automatic Observability</h4>
+      <p>Every inference call traced with tokens, latency, model metadata, and optional payload capture. Query it all with SQL.</p>
+    </div>
+    <div class="card" style="border-top: 3px solid #f59e0b;">
+      <h4>Data Stays in Snowflake</h4>
+      <p>MCP keeps the agent's tool boundary clean — it queries Snowflake data without exposing credentials or raw SQL to the LLM.</p>
+    </div>
+    <div class="card" style="border-top: 3px solid #ef4444;">
+      <h4>Cost Attribution</h4>
+      <p>Per-model, per-user credit tracking via <code>AI_GATEWAY_USAGE_HISTORY</code>. Know exactly who spent what.</p>
+    </div>
+    <div class="card" style="border-top: 3px solid #06b6d4;">
+      <h4>Zero Infrastructure</h4>
+      <p>No proxy servers, no API key management, no separate observability stack. It's built into the platform.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ SLIDE 10: GETTING STARTED ═══════════════ -->
+<section class="slide">
+  <span class="badge">Get Started</span>
+  <h2>Three Objects, One Gateway</h2>
+  <p style="margin-bottom: 24px;">Everything you need to build a governed, observable AI agent on Snowflake:</p>
+
+  <div class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+    <div class="card" style="text-align: center;">
+      <div style="font-size: 2rem; margin-bottom: 8px;">1</div>
+      <h4>Semantic View</h4>
+      <p>Define your data model with dimensions, metrics, and AI instructions.</p>
+    </div>
+    <div class="card" style="text-align: center;">
+      <div style="font-size: 2rem; margin-bottom: 8px;">2</div>
+      <h4>MCP Server</h4>
+      <p>Expose Analyst, Search, and SQL as tools. One DDL statement.</p>
+    </div>
+    <div class="card" style="text-align: center;">
+      <div style="font-size: 2rem; margin-bottom: 8px;">3</div>
+      <h4>Gateway Spec</h4>
+      <p>Configure model allowlists and logging. One ALTER statement.</p>
+    </div>
+  </div>
+
+  <div class="code-block" style="margin-top: 24px;">
+    <span class="cm">-- Then point any OpenAI-compatible client at:</span><br>
+    https://&lt;account&gt;.snowflakecomputing.com<span class="str">/api/v2/aigateways/snowflake/v1</span>
+  </div>
+
+  <div class="table-wrap" style="margin-top: 24px;">
+    <table>
+      <thead><tr><th>Component</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Cortex AI Gateway</strong></td><td>Centralized LLM routing, model governance, built-in observability</td></tr>
+        <tr><td><strong>MCP Server</strong></td><td>Standardized tool interface — Analyst, Search, SQL execution</td></tr>
+        <tr><td><strong>Semantic View</strong></td><td>Business-friendly data model for natural language queries</td></tr>
+        <tr><td><strong>Cortex Search</strong></td><td>RAG retrieval over unstructured documents</td></tr>
+        <tr><td><strong>AGENT_TRACE_TABLE</strong></td><td>OpenTelemetry traces for every gateway call</td></tr>
+        <tr><td><strong>AI_GATEWAY_USAGE_HISTORY</strong></td><td>Token usage and credit consumption per model</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════ LIBRARIES ═══════════════ -->
+<script src="/libs/chart.js@4.4.4/chart.umd.js"></script>
+<script src="/libs/mermaid@10.9.6/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({ startOnLoad: true, securityLevel: 'strict',
+    theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default'
+  });
+
+  new Chart(document.getElementById('tokenChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Input Tokens', 'Output Tokens'],
+      datasets: [{
+        label: 'openai-gpt-5.4 (32 requests)',
+        data: [24474, 2974],
+        backgroundColor: ['#29B5E8', '#7dd3fc'],
+        borderRadius: 6,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: 'bottom',
+          labels: { color: window.matchMedia('(prefers-color-scheme: dark)').matches ? '#94a3b8' : '#475569' }
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { color: window.matchMedia('(prefers-color-scheme: dark)').matches ? '#94a3b8' : '#475569' },
+          grid: { color: window.matchMedia('(prefers-color-scheme: dark)').matches ? '#1e293b' : '#e2e8f0' },
+        },
+        x: {
+          ticks: { color: window.matchMedia('(prefers-color-scheme: dark)').matches ? '#94a3b8' : '#475569' },
+          grid: { display: false },
+        },
+      },
+    },
+  });
+</script>
+
+</body>
+</html>
