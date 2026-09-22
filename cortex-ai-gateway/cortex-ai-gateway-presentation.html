@@ -7,7 +7,7 @@
   <title>Cortex AI Gateway: Centralized AI Access for Enterprise Agents</title>
   <script type="application/json" id="snowflake-report-metadata">
   {
-    "generated": "2026-09-21",
+    "generated": "2026-09-22",
     "intent": "Presentation on Cortex AI Gateway with LangChain agent + MCP use case",
     "sections": [
       { "id": "slide-observability-data", "title": "Observability data",
@@ -328,7 +328,8 @@
 
       <!-- Arrow: Agent → Gateway (left branch) -->
       <line class="arrow" x1="290" y1="140" x2="290" y2="188"/>
-      <text class="arrow-label" x="258" y="170" text-anchor="middle">inference</text>
+      <text class="arrow-label" x="240" y="162" text-anchor="middle">inference</text>
+      <text class="arrow-label" x="240" y="175" text-anchor="middle" style="font-size:9px;fill:#a78bfa;">+ traceparent</text>
 
       <!-- Arrow: Agent → MCP (right branch) -->
       <line class="arrow" x1="410" y1="140" x2="410" y2="188"/>
@@ -378,7 +379,7 @@
     </svg>
   </div>
   <div class="flow-steps" style="margin-top: 16px;">
-    <span class="flow-step">PAT Auth</span>
+    <span class="flow-step">PAT Auth + traceparent</span>
     <span class="flow-arrow">&rarr;</span>
     <span class="flow-step" style="border-color: #29B5E8;">Gateway (inference)</span>
     <span class="flow-arrow">&rarr;</span>
@@ -437,13 +438,18 @@
 <section class="slide">
   <span class="badge">Demo</span>
   <h2>LangChain Agent in Action</h2>
-  <p style="margin-bottom: 16px;">Three lines to point LangChain at the gateway:</p>
+  <p style="margin-bottom: 16px;">Point LangChain at the gateway and propagate trace context:</p>
   <div class="code-block">
+    <span class="kw">import</span> uuid<br>
     <span class="kw">from</span> langchain_openai <span class="kw">import</span> ChatOpenAI<br><br>
+    <span class="cm"># Generate a W3C traceparent so all calls in one agent turn share a trace_id</span><br>
+    trace_id = uuid.uuid4().hex<br>
+    traceparent = <span class="str">f"00-{trace_id}-{uuid.uuid4().hex[:16]}-01"</span><br><br>
     llm = <span class="fn">ChatOpenAI</span>(<br>
     &nbsp;&nbsp;model=<span class="str">"openai-gpt-5.4"</span>,<br>
     &nbsp;&nbsp;base_url=<span class="str">f"https://{ACCOUNT}/api/v2/aigateways/snowflake/v1"</span>,<br>
     &nbsp;&nbsp;api_key=PAT_TOKEN,<br>
+    &nbsp;&nbsp;default_headers={<span class="str">"traceparent"</span>: traceparent},<br>
     )
   </div>
   <p style="margin: 16px 0;">The agent chains tools to answer data questions:</p>
@@ -473,33 +479,41 @@
 
   <div class="stat-grid">
     <div class="stat">
-      <div class="num">32</div>
+      <div class="num">75</div>
       <div class="label">Requests (last 24h)</div>
     </div>
     <div class="stat">
-      <div class="num">24,474</div>
+      <div class="num">61,509</div>
       <div class="label">Input Tokens</div>
     </div>
     <div class="stat">
-      <div class="num">2,974</div>
+      <div class="num">7,785</div>
       <div class="label">Output Tokens</div>
     </div>
     <div class="stat">
-      <div class="num">0.053</div>
+      <div class="num">0.137</div>
       <div class="label">Credits Used</div>
     </div>
   </div>
 
+  <div class="card" style="margin-bottom: 20px; border-left: 3px solid #8b5cf6;">
+    <h4>Trace Context Propagation</h4>
+    <p>The <code>traceparent</code> header (W3C Trace Context) groups all inference calls from one agent turn under a single <code>trace_id</code>. Without it, each LLM call gets its own trace ID and appears as an unrelated event. With it, a multi-step agent turn that makes 5 gateway calls shows as <strong>5 spans in 1 trace</strong> instead of 5 separate traces.</p>
+  </div>
+
   <div class="two-col">
     <div>
-      <h3>Trace Table</h3>
+      <h3>Group by Trace</h3>
       <div class="code-block" style="font-size: 0.82rem;">
         <span class="kw">SELECT</span><br>
         &nbsp;&nbsp;TRACE:trace_id::<span class="fn">STRING</span>,<br>
-        &nbsp;&nbsp;RECORD:name::<span class="fn">STRING</span> <span class="kw">AS</span> span_name,<br>
-        &nbsp;&nbsp;RECORD_ATTRIBUTES:<span class="str">"gen_ai.usage.input_tokens"</span>,<br>
-        &nbsp;&nbsp;RECORD_ATTRIBUTES:<span class="str">"gen_ai.usage.output_tokens"</span><br>
-        <span class="kw">FROM TABLE</span>(<span class="fn">AGENT_TRACE_TABLE</span>(<span class="str">'SNOWFLAKE'</span>))
+        &nbsp;&nbsp;<span class="fn">COUNT</span>(*) <span class="kw">AS</span> span_count,<br>
+        &nbsp;&nbsp;<span class="fn">SUM</span>(RECORD_ATTRIBUTES:<span class="str">"gen_ai.usage.input_tokens"</span>::INT)<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">AS</span> total_in,<br>
+        &nbsp;&nbsp;<span class="fn">SUM</span>(RECORD_ATTRIBUTES:<span class="str">"gen_ai.usage.output_tokens"</span>::INT)<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">AS</span> total_out<br>
+        <span class="kw">FROM TABLE</span>(<span class="fn">AGENT_TRACE_TABLE</span>(<span class="str">'SNOWFLAKE'</span>))<br>
+        <span class="kw">GROUP BY</span> trace_id
       </div>
     </div>
     <div>
@@ -640,8 +654,8 @@
     data: {
       labels: ['Input Tokens', 'Output Tokens'],
       datasets: [{
-        label: 'openai-gpt-5.4 (32 requests)',
-        data: [24474, 2974],
+        label: 'openai-gpt-5.4 (75 requests)',
+        data: [61509, 7785],
         backgroundColor: ['#29B5E8', '#7dd3fc'],
         borderRadius: 6,
       }],
