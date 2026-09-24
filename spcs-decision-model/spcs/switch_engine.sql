@@ -54,7 +54,7 @@ $$
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- OPTION 2: openjev 0.8B (Qwen3.5 — smallest, fastest openjev)
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+/*
 CREATE SERVICE DJEV_DEMO.INFERENCE.DECISION_SERVICE
     IN COMPUTE POOL DJEV_GPU_POOL
     FROM SPECIFICATION $$
@@ -92,12 +92,12 @@ $$
     MIN_INSTANCES = 1
     MAX_INSTANCES = 1
     QUERY_WAREHOUSE = DJEV_WH;
-
+*/
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- OPTION 3: openjev 2B (Qwen3.5 — balanced)
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/*
+
 CREATE SERVICE DJEV_DEMO.INFERENCE.DECISION_SERVICE
     IN COMPUTE POOL DJEV_GPU_POOL
     FROM SPECIFICATION $$
@@ -135,7 +135,7 @@ $$
     MIN_INSTANCES = 1
     MAX_INSTANCES = 1
     QUERY_WAREHOUSE = DJEV_WH;
-*/
+
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- OPTION 4: openjev 4B (Qwen3.5 — highest accuracy)
