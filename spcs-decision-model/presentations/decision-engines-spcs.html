@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="snowflake-source" content="cortex-agent-authored">
+  <title>Typed Decision Engines on Snowpark Container Services</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg: #0F1B2D;
+  --sidebar-bg: #1B2A4A;
+  --primary: #29B5E8;
+  --accent: #7C3AED;
+  --text: #E2E8F0;
+  --text-muted: #94A3B8;
+  --card-bg: #162236;
+  --border: #2D4A6F;
+  --green: #10B981;
+  --orange: #F59E0B;
+  --red: #EF4444;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+.progress-bar {
+  position: fixed; top: 0; left: 0; height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  z-index: 1000; transition: width 0.1s;
+}
+
+.sidebar {
+  position: fixed; left: 0; top: 0; width: 260px; height: 100vh;
+  background: var(--sidebar-bg); padding: 2rem 1.5rem;
+  overflow-y: auto; border-right: 1px solid var(--border); z-index: 100;
+}
+
+.sidebar h2 {
+  font-size: 0.85rem; font-weight: 600; color: var(--primary);
+  margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 0.05em;
+}
+
+.sidebar a {
+  display: block; color: var(--text-muted); text-decoration: none;
+  padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.82rem; margin-bottom: 0.25rem; transition: all 0.2s;
+}
+
+.sidebar a:hover, .sidebar a.active {
+  color: var(--text); background: rgba(41, 181, 232, 0.1);
+}
+
+.sidebar a.active { border-left: 3px solid var(--primary); padding-left: calc(0.75rem - 3px); }
+
+.main { margin-left: 260px; padding: 0; }
+
+.slide {
+  min-height: 100vh; display: flex; flex-direction: column;
+  justify-content: center; align-items: center; padding: 4rem 3rem; max-width: 1200px; margin: 0 auto;
+}
+
+.slide h1 {
+  font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+
+.slide h2 { font-size: 1.75rem; font-weight: 600; color: var(--text); margin-bottom: 1.5rem; }
+.slide h3 { font-size: 1.25rem; font-weight: 500; color: var(--text-muted); margin-bottom: 1rem; }
+.slide p { font-size: 1.1rem; color: var(--text-muted); max-width: 700px; text-align: center; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; width: 100%; margin: 2rem 0; }
+.stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; }
+.stat-card .value { font-size: 2rem; font-weight: 700; color: var(--primary); }
+.stat-card .label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
+
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; width: 100%; margin: 2rem 0; }
+.card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+.card h4 { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.75rem; }
+.card p { font-size: 0.9rem; color: var(--text-muted); text-align: left; }
+
+table { width: 100%; border-collapse: collapse; margin: 2rem 0; font-size: 0.9rem; }
+th { background: var(--card-bg); color: var(--primary); font-weight: 600; padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid var(--border); }
+td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); color: var(--text); }
+tr:hover td { background: rgba(41, 181, 232, 0.05); }
+
+.highlight-box { background: rgba(41, 181, 232, 0.1); border: 1px solid var(--primary); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; width: 100%; }
+.context-box { background: rgba(124, 58, 237, 0.1); border: 1px solid var(--accent); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; width: 100%; }
+
+.badge-green { background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+.badge-blue { background: rgba(41, 181, 232, 0.15); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+.badge-purple { background: rgba(124, 58, 237, 0.15); color: var(--accent); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+.badge-orange { background: rgba(245, 158, 11, 0.15); color: var(--orange); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+
+.score-high { color: var(--green); font-weight: 600; }
+.score-mid { color: var(--orange); font-weight: 600; }
+.score-best { color: var(--green); font-weight: 700; background: rgba(16, 185, 129, 0.1); padding: 0.2rem 0.5rem; border-radius: 4px; }
+
+code { background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; padding: 0.2rem 0.5rem; font-size: 0.85rem; font-family: 'SF Mono', 'Fira Code', monospace; color: var(--primary); }
+pre { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; overflow-x: auto; font-size: 0.85rem; font-family: 'SF Mono', 'Fira Code', monospace; color: var(--text); width: 100%; margin: 1rem 0; line-height: 1.7; }
+
+.slide ul { list-style: none; width: 100%; max-width: 700px; }
+.slide ul li { padding: 0.75rem 0; padding-left: 1.5rem; position: relative; color: var(--text); font-size: 1.05rem; }
+.slide ul li::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 8px; height: 8px; border-radius: 50%; background: var(--primary); }
+
+.anim-fade { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.anim-fade.visible { opacity: 1; transform: translateY(0); }
+
+.arch-diagram { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; width: 100%; margin: 2rem 0; }
+.arch-box { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.5rem; text-align: center; min-width: 200px; }
+.arch-box.active { border-color: var(--primary); background: rgba(41, 181, 232, 0.08); }
+.arch-row { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+.arch-arrow { color: var(--text-muted); font-size: 1.2rem; }
+.arch-label { font-size: 0.75rem; color: var(--text-muted); }
+
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .slide { padding: 2rem 1.5rem; }
+}
+  </style>
+</head>
+<body>
+  <div class="progress-bar"></div>
+
+  <nav class="sidebar">
+    <h2>Decision Engines</h2>
+    <a href="#hero">Overview</a>
+    <a href="#problem">The Problem</a>
+    <a href="#approach">Our Approach</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#engines">Engine Comparison</a>
+    <a href="#primitives">Decision Primitives</a>
+    <a href="#sql-interface">SQL Interface</a>
+    <a href="#use-cases">Use Cases</a>
+    <a href="#benchmark">Benchmark Design</a>
+    <a href="#deployment">Deployment</a>
+    <a href="#next-steps">Next Steps</a>
+  </nav>
+
+  <main class="main">
+
+    <!-- HERO -->
+    <section class="slide" id="hero">
+      <h1>Typed Decision Engines on SPCS</h1>
+      <p>Deploying and benchmarking non-autoregressive classification models on Snowpark Container Services, compared against Snowflake's native AI functions.</p>
+      <div class="stat-grid" style="margin-top: 2.5rem;">
+        <div class="stat-card anim-fade"><div class="value">6</div><div class="label">Engines Compared</div></div>
+        <div class="stat-card anim-fade"><div class="value">3</div><div class="label">Use Cases</div></div>
+        <div class="stat-card anim-fade"><div class="value">90</div><div class="label">Benchmark Rows</div></div>
+        <div class="stat-card anim-fade"><div class="value">1</div><div class="label">SQL Function</div></div>
+      </div>
+    </section>
+
+    <!-- PROBLEM -->
+    <section class="slide" id="problem">
+      <h2>The Problem</h2>
+      <p style="margin-bottom: 2rem;">Many AI workloads don't need text generation. They need fast, structured decisions over closed label sets &mdash; with calibrated confidence scores, not hallucinated prose.</p>
+      <div class="card-grid">
+        <div class="card anim-fade">
+          <h4>Sentiment Classification</h4>
+          <p>Route customer feedback to the right team based on tone. Needs to be fast enough for real-time pipelines and accurate enough to trust without human review.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Entity Resolution</h4>
+          <p>Match ambiguous descriptions to canonical entities from a known set. "Apple" could be a tech company, a record label, or a farm cooperative.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Document Filtering</h4>
+          <p>Score documents against arbitrary criteria: does this contain PII? Is this a financial disclosure? Binary decisions with calibrated probability.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- APPROACH -->
+    <section class="slide" id="approach">
+      <h2>Our Approach</h2>
+      <p style="margin-bottom: 2rem;">Non-autoregressive decision engines that answer typed questions in a single forward pass. No text generation, nothing to parse, nothing to hallucinate.</p>
+      <div class="highlight-box anim-fade">
+        <strong>Key insight:</strong> These models are trained as classifiers, not generators. A single forward pass produces a probability distribution over a closed label set. Inference is 10-100x faster than LLM generation, and the output is deterministic and structured.
+      </div>
+      <div class="stat-grid" style="margin-top: 2rem;">
+        <div class="stat-card anim-fade"><div class="value">33ms</div><div class="label">Laya per question (T4)</div></div>
+        <div class="stat-card anim-fade"><div class="value">0</div><div class="label">Tokens generated</div></div>
+        <div class="stat-card anim-fade"><div class="value">421M</div><div class="label">Smallest model</div></div>
+        <div class="stat-card anim-fade"><div class="value">4B</div><div class="label">Largest model</div></div>
+      </div>
+    </section>
+
+    <!-- ARCHITECTURE -->
+    <section class="slide" id="architecture">
+      <h2>Architecture</h2>
+      <h3>One image, one service function, swap engines with an env var</h3>
+      <div class="arch-diagram anim-fade">
+        <div class="arch-box" style="border-color: var(--accent);">
+          <div style="font-weight: 600;">SQL Query</div>
+          <div class="arch-label">DECIDE(state, questions)</div>
+        </div>
+        <div class="arch-arrow">&darr;</div>
+        <div class="arch-box active">
+          <div style="font-weight: 600;">SPCS Adapter</div>
+          <div class="arch-label">:8080 /predict &mdash; concurrent batching</div>
+        </div>
+        <div class="arch-arrow">&darr;</div>
+        <div class="arch-row">
+          <div class="arch-box">
+            <div style="font-weight: 600;">Laya</div>
+            <div class="arch-label">laya-serve :8001</div>
+            <div><span class="badge-green">ModernBERT 421M</span></div>
+          </div>
+          <div style="color: var(--text-muted); align-self: center; font-weight: 600;">OR</div>
+          <div class="arch-box">
+            <div style="font-weight: 600;">openjev</div>
+            <div class="arch-label">openjev_server :8001</div>
+            <div><span class="badge-purple">Qwen3.5 0.8B/2B/4B</span></div>
+          </div>
+        </div>
+        <div class="arch-arrow">&darr;</div>
+        <div class="arch-box">
+          <div style="font-weight: 600;">GPU_NV_S</div>
+          <div class="arch-label">1x A10G &mdash; 22GB VRAM</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ENGINES -->
+    <section class="slide" id="engines">
+      <h2>Engine Comparison</h2>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead>
+            <tr><th>Engine</th><th>Architecture</th><th>Parameters</th><th>Approach</th><th>License</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Laya</strong></td>
+              <td>ModernBERT-large encoder</td>
+              <td>421M</td>
+              <td>Direct classification heads trained with RLCD</td>
+              <td><span class="badge-green">Apache 2.0</span></td>
+            </tr>
+            <tr>
+              <td><strong>openjev 0.8B</strong></td>
+              <td>Qwen3.5 cross-encoder</td>
+              <td>0.8B</td>
+              <td>NLI entailment scoring per option</td>
+              <td><span class="badge-blue">MIT</span></td>
+            </tr>
+            <tr>
+              <td><strong>openjev 2B</strong></td>
+              <td>Qwen3.5 cross-encoder</td>
+              <td>2B</td>
+              <td>NLI entailment scoring per option</td>
+              <td><span class="badge-blue">MIT</span></td>
+            </tr>
+            <tr>
+              <td><strong>openjev 4B</strong></td>
+              <td>Qwen3.5 cross-encoder</td>
+              <td>4B</td>
+              <td>NLI entailment scoring per option</td>
+              <td><span class="badge-blue">MIT</span></td>
+            </tr>
+            <tr>
+              <td><strong>AI_CLASSIFY</strong></td>
+              <td>Snowflake built-in</td>
+              <td>&mdash;</td>
+              <td>Serverless classification function</td>
+              <td><span class="badge-orange">Snowflake</span></td>
+            </tr>
+            <tr>
+              <td><strong>AI_COMPLETE</strong></td>
+              <td>Snowflake built-in (llama3.1-8b)</td>
+              <td>8B</td>
+              <td>Prompt-based text generation</td>
+              <td><span class="badge-orange">Snowflake</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- PRIMITIVES -->
+    <section class="slide" id="primitives">
+      <h2>Decision Primitives</h2>
+      <h3>Three typed outputs &mdash; no free-text parsing required</h3>
+      <div class="card-grid">
+        <div class="card anim-fade">
+          <h4><span class="badge-blue">choice</span></h4>
+          <p>Pick from named options. Returns the winner, full probability distribution, and confidence score.</p>
+          <pre style="margin-top: 0.75rem;">{"sentiment": {
+  "choice": "positive",
+  "confidence": 0.94,
+  "probabilities": {
+    "positive": 0.92,
+    "negative": 0.03,
+    "neutral": 0.05
+  }
+}}</pre>
+        </div>
+        <div class="card anim-fade">
+          <h4><span class="badge-purple">noul</span></h4>
+          <p>Binary yes/no. Returns calibrated P(true) from 0.0 to 1.0. Threshold at 0.5 or use the raw probability.</p>
+          <pre style="margin-top: 0.75rem;">{"relevant": {
+  "noul": 0.94
+}}
+
+
+// P(true) = 0.94
+// threshold >= 0.5 -> TRUE</pre>
+        </div>
+        <div class="card anim-fade">
+          <h4><span class="badge-green">score</span></h4>
+          <p>Ordered rubric (2-10 levels). Returns expected score and per-level probability distribution.</p>
+          <pre style="margin-top: 0.75rem;">{"urgency": {
+  "score": 1.84,
+  "probabilities": {
+    "0": 0.05,
+    "1": 0.11,
+    "2": 0.84
+  }
+}}</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- SQL INTERFACE -->
+    <section class="slide" id="sql-interface">
+      <h2>The SQL Interface</h2>
+      <h3>One generic function &mdash; caller defines the questions</h3>
+      <div class="highlight-box anim-fade">
+        <code>DECIDE(state VARCHAR, questions VARIANT) RETURNS VARIANT</code>
+      </div>
+      <pre class="anim-fade">-- Sentiment classification
+SELECT
+    text,
+    DECIDE(text, OBJECT_CONSTRUCT(
+        'sentiment', OBJECT_CONSTRUCT(
+            'type', 'choice',
+            'instructions', 'Classify the sentiment.',
+            'criteria', OBJECT_CONSTRUCT(
+                'positive', 'positive sentiment',
+                'negative', 'negative sentiment',
+                'neutral', 'neutral or factual'
+            )
+        )
+    )) AS result,
+    result:sentiment:choice::VARCHAR AS sentiment,
+    result:sentiment:confidence::FLOAT AS confidence
+FROM reviews;</pre>
+      <div class="context-box anim-fade" style="margin-top: 1rem;">
+        <strong>No schema changes needed to switch use cases.</strong> The same function handles sentiment, entity resolution, document filtering, urgency scoring, churn detection, and any other typed decision &mdash; just change the questions VARIANT.
+      </div>
+    </section>
+
+    <!-- USE CASES -->
+    <section class="slide" id="use-cases">
+      <h2>Demo Use Cases</h2>
+      <div class="card-grid">
+        <div class="card anim-fade">
+          <h4>Sentiment Classification</h4>
+          <p><span class="badge-blue">choice</span> over positive / negative / neutral</p>
+          <p style="margin-top: 0.5rem;"><strong>40 test rows:</strong> product reviews, support tickets, social posts, news headlines. Balanced across labels.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Entity Resolution</h4>
+          <p><span class="badge-blue">choice</span> over candidate entity names</p>
+          <p style="margin-top: 0.5rem;"><strong>20 test rows:</strong> descriptions of companies and people matched against 3 candidates each. Includes disambiguation pairs (Apple Inc. vs Apple Records).</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Document Filtering</h4>
+          <p><span class="badge-purple">noul</span> returning P(relevant)</p>
+          <p style="margin-top: 0.5rem;"><strong>30 test rows:</strong> documents scored against 3 criteria types (financial metrics, PII, legal language). Binary ground truth.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- BENCHMARK -->
+    <section class="slide" id="benchmark">
+      <h2>Benchmark Design</h2>
+      <h3>Systematic comparison across all engines and Snowflake AI functions</h3>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead>
+            <tr><th>Dimension</th><th>What we measure</th><th>How</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Accuracy</strong></td><td>Fraction of correct predictions vs ground truth</td><td>Per engine, per use case</td></tr>
+            <tr><td><strong>Confidence calibration</strong></td><td>Are high-confidence predictions more accurate?</td><td>Bucketed (0.9+, 0.7-0.9, 0.5-0.7, &lt;0.5)</td></tr>
+            <tr><td><strong>Throughput</strong></td><td>Wall-clock time per batch</td><td>MAX_BATCH_ROWS = 1, 4, 8, 16, 32</td></tr>
+            <tr><td><strong>Head-to-head</strong></td><td>Where do engines disagree?</td><td>Join results, filter mismatches</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1rem;">
+        <strong>All results land in a single BENCHMARK_RESULTS table</strong> with columns for engine, use_case, predicted, ground_truth, confidence. Summary queries aggregate accuracy and calibration across all runs.
+      </div>
+    </section>
+
+    <!-- DEPLOYMENT -->
+    <section class="slide" id="deployment">
+      <h2>Deployment</h2>
+      <h3>Three commands from code to running service</h3>
+      <pre class="anim-fade" style="font-size: 0.9rem;">
+# 1. Build and push (one image supports all engines)
+./deploy.sh &lt;repository_url&gt;
+
+# 2. Create infrastructure (run setup.sql sections 1-5)
+#    Database, image repo, compute pool, external access
+
+# 3. Create service (run setup.sql section 6)
+#    Swap engines by changing env vars:
+#      DECISION_ENGINE: "laya" | "openjev"
+#      OPENJEV_CHECKPOINT: "qwen3.5-0.8b-nli-v5"
+#                        | "qwen3.5-2b-nli-v5"
+#                        | "qwen3.5-4b-nli-v5"</pre>
+      <div class="stat-grid anim-fade" style="margin-top: 1.5rem;">
+        <div class="stat-card"><div class="value">GPU_NV_S</div><div class="label">A10G, 22GB VRAM</div></div>
+        <div class="stat-card"><div class="value">&lt;2min</div><div class="label">Pool provision time</div></div>
+        <div class="stat-card"><div class="value">1 image</div><div class="label">All engines</div></div>
+        <div class="stat-card"><div class="value">$0</div><div class="label">When suspended</div></div>
+      </div>
+    </section>
+
+    <!-- NEXT STEPS -->
+    <section class="slide" id="next-steps">
+      <h2>Next Steps</h2>
+      <div class="card-grid">
+        <div class="card anim-fade">
+          <h4>Run Benchmarks</h4>
+          <p>Execute benchmark.sql across all engine configurations and Snowflake AI baselines. Collect accuracy, calibration, and latency data into BENCHMARK_RESULTS.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Tune Batch Sizes</h4>
+          <p>Compare MAX_BATCH_ROWS settings (1, 4, 8, 16, 32) to find the throughput sweet spot for each engine on the A10G.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Fine-Tune for Domain</h4>
+          <p>Both Laya and openjev support fine-tuning. Specialize on your actual ticket/document corpus for production-grade accuracy.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Production Patterns</h4>
+          <p>Dynamic Tables for continuous inference, autoscaling service instances, Gateway for blue-green deployment and A/B testing between engines.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const progressBar = document.querySelector('.progress-bar');
+    window.addEventListener('scroll', function() {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+    });
+
+    const observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) { entry.target.classList.add('visible'); }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.anim-fade').forEach(function(el) { observer.observe(el); });
+
+    const sections = document.querySelectorAll('.slide');
+    const navLinks = document.querySelectorAll('.sidebar a');
+    window.addEventListener('scroll', function() {
+      var current = '';
+      sections.forEach(function(section) {
+        if (window.scrollY >= section.offsetTop - 200) { current = section.getAttribute('id'); }
+      });
+      navLinks.forEach(function(link) {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) { link.classList.add('active'); }
+      });
+    });
+  </script>
+</body>
+</html>
