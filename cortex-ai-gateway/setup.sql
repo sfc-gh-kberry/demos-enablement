@@ -9,9 +9,11 @@
 --   - ACCOUNTADMIN or a role with CREATE DATABASE, CREATE WAREHOUSE
 --   - Cross-region inference enabled (ALTER ACCOUNT SET
 --     CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION') for broader model access.
---     Note that model availability through the gateway still varies by region
---     even with cross-region enabled -- confirm with a single test request
---     before building a demo around a specific model.
+--     Model availability through the gateway varies by region AND over time even
+--     with cross-region enabled: a 503 means the gateway could not serve that
+--     model at that moment, which is often transient capacity rather than a
+--     misconfiguration. Confirm with a test request before building a demo
+--     around a specific model, and keep a fallback in mind.
 --   - SNOWFLAKE.CORTEX_USER database role granted to your role
 -- =============================================================================
 

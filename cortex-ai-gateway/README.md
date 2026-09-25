@@ -24,6 +24,7 @@ SEs, Solution Architects, Platform Engineers, and customers evaluating centraliz
 | `setup.sql` | SQL setup script — database, tables, semantic view, Cortex Search service, MCP server, grants, gateway spec |
 | `cortex-ai-gateway-langchain-mcp.ipynb` | Hands-on notebook — gateway + LangChain + MCP end-to-end with observability queries |
 | `cortex-ai-gateway-presentation.html` | 10-slide presentation covering architecture, benefits, and demo walkthrough |
+| `gateway-analyzer/` | Streamlit app — Cortex AI Gateway trace analysis: traffic, per-model latency, trace grouping, and rule-based recommendations ([README](gateway-analyzer/README.md)) |
 
 ## Architecture
 
@@ -67,7 +68,7 @@ The AI Gateway uses two distinct URL paths:
 - A Personal Access Token (PAT) stored in `~/.snowflake/connections.toml` as the `password` key, or exported as `SNOWFLAKE_PAT`. The gateway and MCP endpoints are REST APIs, so an SSO / `externalbrowser` connection is not sufficient on its own.
 - If you create the PAT with `ROLE_RESTRICTION`, run **section 8 of `setup.sql`** to grant that role access to the lab objects. Without it the MCP server returns `does not exist or not authorized` even though `SHOW MCP SERVERS` lists it.
 - Python 3.11+ with `langchain-openai`, `langchain-mcp-adapters`, `langgraph`, `snowflake-connector-python`
-- Cross-region inference enabled (`ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION'`). Model availability through the gateway still varies by region even with this on — a `503` on a model means the gateway cannot serve it in your account. Set `GATEWAY_MODEL` to override the default (`openai-gpt-5.4`).
+- Cross-region inference enabled (`ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION'`). Model availability through the gateway varies by region **and over time** even with this on: a `503` means the gateway could not serve that model at that moment, which is frequently transient capacity rather than a misconfiguration. Confirm with a test request before building a demo around a specific model. Set `GATEWAY_MODEL` to override the default (`openai-gpt-5.4`).
 
 ### Steps
 
@@ -82,6 +83,21 @@ The AI Gateway uses two distinct URL paths:
 2. **MCP tool loading** — `MultiServerMCPClient` with streamable HTTP transport, no npx bridge
 3. **Agent queries** — structured data (Analyst → execute_sql), unstructured search (Cortex Search), and hybrid questions using both
 4. **Observability** — trace table queries showing per-span token counts, conversation chain reconstruction from `gen_ai.input.messages`/`gen_ai.output.messages`, and credit usage from `AI_GATEWAY_USAGE_HISTORY`
+
+### Optional: Gateway Analyzer app
+
+[`gateway-analyzer/`](gateway-analyzer/) is a Streamlit app over the same trace
+data — traffic and error volume, per-model p50/p95 latency and throughput, trace
+grouping, and rule-based recommendations. Useful as a visual close to the demo
+after the notebook's SQL, or pointed at a customer account carrying real gateway
+traffic.
+
+It reads `AGENT_TRACE_TABLE('SNOWFLAKE')`, the same gateway object section 9
+configures, and needs only `MONITOR ON AI GATEWAY` — not ACCOUNTADMIN. Run it
+locally with `python3 -m streamlit run streamlit_app.py` or deploy it with
+`snow streamlit deploy`. Note that this lab produces traces from a single user,
+so the caller-oriented views come alive only against multi-service traffic; see
+the app's [README](gateway-analyzer/README.md).
 
 ## Cleanup
 
