@@ -21,7 +21,7 @@ SEs, Solution Architects, Platform Engineers, and customers evaluating centraliz
 
 | File | Description |
 |------|-------------|
-| `setup.sql` | SQL setup script — database, tables, semantic view, Cortex Search service, MCP server, gateway spec |
+| `setup.sql` | SQL setup script — database, tables, semantic view, Cortex Search service, MCP server, grants, gateway spec |
 | `cortex-ai-gateway-langchain-mcp.ipynb` | Hands-on notebook — gateway + LangChain + MCP end-to-end with observability queries |
 | `cortex-ai-gateway-presentation.html` | 10-slide presentation covering architecture, benefits, and demo walkthrough |
 
@@ -55,20 +55,23 @@ The AI Gateway uses two distinct URL paths:
 | `/api/v2/aigateways/SNOWFLAKE` | Admin (spec management, SHOW, ALTER) |
 | `/api/v2/databases/<db>/schemas/<schema>/mcp-servers/<name>` | MCP (streamable HTTP) |
 
-**Note:** Hostnames must use hyphens, not underscores, for valid SSL certificates (e.g., `perickson-aws1` not `perickson_aws1`).
+**Note:** Hostnames must use hyphens, not underscores, for valid SSL certificates (e.g., `perickson-aws1` not `perickson_aws1`). This applies to the `base_url` reported by `SHOW AI GATEWAYS` too — it echoes the account name verbatim, so the value it hands you may need the transform before it will pass TLS verification.
+
+**Do not use `/api/v2/cortex/v1/*` for inference.** That is the separate Cortex Inference REST API. It answers successfully, so pointing `base_url` there fails *silently* rather than erroring — but the calls bypass the gateway completely: nothing lands in `AI_GATEWAY_USAGE_HISTORY`, nothing appears in gateway traces, and the model allowlist, budgets, and quotas do not apply. Read the authoritative inference base off `SHOW AI GATEWAYS` rather than hardcoding a path.
 
 ## Hands-On Lab
 
 ### Prerequisites
 
 - A Snowflake account with ACCOUNTADMIN (or CREATE DATABASE + CREATE WAREHOUSE privileges)
-- A Personal Access Token (PAT) stored in `~/.snowflake/connections.toml`
+- A Personal Access Token (PAT) stored in `~/.snowflake/connections.toml` as the `password` key, or exported as `SNOWFLAKE_PAT`. The gateway and MCP endpoints are REST APIs, so an SSO / `externalbrowser` connection is not sufficient on its own.
+- If you create the PAT with `ROLE_RESTRICTION`, run **section 8 of `setup.sql`** to grant that role access to the lab objects. Without it the MCP server returns `does not exist or not authorized` even though `SHOW MCP SERVERS` lists it.
 - Python 3.11+ with `langchain-openai`, `langchain-mcp-adapters`, `langgraph`, `snowflake-connector-python`
-- Cross-region inference enabled (for model access)
+- Cross-region inference enabled (`ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION'`). Model availability through the gateway still varies by region even with this on — a `503` on a model means the gateway cannot serve it in your account. Set `GATEWAY_MODEL` to override the default (`openai-gpt-5.4`).
 
 ### Steps
 
-1. Run `setup.sql` in your Snowflake account to create all objects
+1. Run `setup.sql` in your Snowflake account to create all objects. Note that section 9 runs `ALTER AI GATEWAY`, which **replaces the account-level gateway spec** — run `SHOW AI GATEWAYS` and save the existing `specification` first if the account is shared. The default spec also enables `capture_payload.request_response`, which records full prompt and completion text for every caller on the account.
 2. Verify: `SHOW AI GATEWAYS` and `SHOW MCP SERVERS IN SCHEMA CORTEX_GATEWAY_LAB.PUBLIC`
 3. Open `cortex-ai-gateway-langchain-mcp.ipynb` and run cells sequentially
 4. The notebook connects to the gateway, loads MCP tools, runs agent queries, and queries observability data
@@ -82,9 +85,29 @@ The AI Gateway uses two distinct URL paths:
 
 ## Cleanup
 
+The budget, quota, user tag, and gateway spec are **account-level** and survive a
+`DROP DATABASE`. Section 9 of the notebook does this for you; the SQL equivalent is:
+
 ```sql
-DROP DATABASE IF EXISTS CORTEX_GATEWAY_LAB;
+-- Release the quota first so nobody stays blocked
+CALL CORTEX_GATEWAY_LAB.PUBLIC.GATEWAY_QUOTA!SET_BLOCK_ENFORCEMENT_ENABLED(FALSE);
+DROP SNOWFLAKE.CORE.QUOTA  IF EXISTS CORTEX_GATEWAY_LAB.PUBLIC.GATEWAY_QUOTA;
+DROP SNOWFLAKE.CORE.BUDGET IF EXISTS CORTEX_GATEWAY_LAB.PUBLIC.GATEWAY_BUDGET;
+
+ALTER USER IDENTIFIER(CURRENT_USER()) UNSET TAG CORTEX_GATEWAY_LAB.PUBLIC.COST_CENTER;
+DROP TAG IF EXISTS CORTEX_GATEWAY_LAB.PUBLIC.COST_CENTER;
+
+DROP DATABASE  IF EXISTS CORTEX_GATEWAY_LAB;
 DROP WAREHOUSE IF EXISTS GATEWAY_LAB_WH;
--- The AI Gateway is account-level and shared; only reset if needed:
--- ALTER AI GATEWAY SNOWFLAKE FROM SPECIFICATION $$ models: [{name: '*'}] $$;
+
+-- The AI Gateway is account-level and shared, so it is never dropped. Restore the
+-- spec you captured before running setup.sql. At minimum, turn payload capture off:
+-- ALTER AI GATEWAY SNOWFLAKE FROM SPECIFICATION $$
+-- models:
+--   - name: '*'
+-- logging:
+--   enabled: true
+--   capture_payload:
+--     request_response: false
+-- $$;
 ```
